@@ -112,7 +112,6 @@ def calculate_bill(current_readings: dict, actual_total_bill=None):
         total_collected = sum(b['amount'] for b in bills.values())
         difference = round(actual_total_bill - total_collected, 2)
         if difference != 0:
-            # Add difference to the first tenant (T1) to balance
             bills['t1']['amount'] = round(bills['t1']['amount'] + difference, 2)
     else:
         bills = {
@@ -124,16 +123,17 @@ def calculate_bill(current_readings: dict, actual_total_bill=None):
         }
     return bills
 
-def get_history(meter_id):
+def get_full_history():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute(
-        "SELECT month, reading, amount FROM readings_history WHERE meter_id=? ORDER BY id ASC",
-        (meter_id,)
-    )
-    data = cur.fetchall()
+    cur.execute("""
+        SELECT meter_id, month, reading, amount
+        FROM readings_history
+        ORDER BY id ASC
+    """)
+    rows = cur.fetchall()
     conn.close()
-    return data
+    return rows
 
 def reset_db():
     """

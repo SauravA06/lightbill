@@ -94,7 +94,7 @@ if st.session_state.get("admin", False):
     current['water'] = st.number_input("Water Motor", min_value=prev['water'])
 
     st.subheader("Optional: Enter Actual Total Bill Amount (₹)")
-    actual_bill_input = st.number_input("Amount Paid to Government", min_value=0, value=0)
+    actual_bill_input = st.number_input("Amount Paid to MSEDCL", min_value=0, value=0)
 
     if st.button("Calculate Bill"):
         if actual_bill_input > 0:
@@ -129,6 +129,12 @@ if history:
     df = pd.DataFrame(history, columns=["Meter","Month","Reading","Amount"])
     # Pivot table: months as rows, tenants+water as columns
     pivot = df.pivot_table(index='Month', columns='Meter', values=['Reading','Amount'], aggfunc='first')
+
+    # Add ₹ symbol to Amount columns
+    for col in pivot.columns:
+        if col[0] == 'Amount':
+            pivot[col] = pivot[col].apply(lambda x: f"₹{x}" if pd.notnull(x) else "")
+
     pivot = pivot.sort_index(ascending=False)
     last_2_months = pivot.head(2)
     st.dataframe(last_2_months)

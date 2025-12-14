@@ -1,51 +1,35 @@
 import streamlit as st
+import pandas as pd
+from datetime import datetime
 from logic import (
     init_db,
     calculate_bill,
     get_previous_reading,
     update_readings,
     is_initialized,
-    get_history,
+    get_full_history,
     reset_db
 )
-from datetime import datetime
 
 st.set_page_config(page_title="Electricity Bill Calculator", layout="wide")
-st.title("⚡ Electricity Bill Dashboard")
-st.caption("3 Tenants + Shared Water Motor")
+
+# ---------- TOP ---------- #
+st.markdown("<h1 style='text-align: center;'>⚡ Electricity Bill Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------- INIT DB ---------- #
 init_db()
 
-# ---------- READ-ONLY HISTORY FOR ALL USERS ---------- #
-st.subheader("📜 Meter Reading & Amount History (Read-Only)")
-for tenant in ['t1','t2','t3','water']:
-    hist = get_history(tenant)
-    table_data = []
-    for month, reading, amount in hist:
-        table_data.append({
-            "Month": month,
-            "Reading": reading,
-            "Amount Collected": amount if amount is not None else "-"
-        })
-
-    # Use expander (dropdown)
-    with st.expander(f"{tenant.upper()} History"):
-        if table_data:
-            st.table(table_data)
-        else:
-            st.info("No data yet for this meter")
-
-# ---------- PASSWORD-PROTECTED ADMIN SECTION ---------- #
-st.subheader("🔒 Admin Actions")
-password = st.text_input("Enter admin password", type="password")
+# ---------- PASSWORD SECTION ---------- #
+st.markdown("<h4 style='text-align: center;'>Enter Admin Password</h4>", unsafe_allow_html=True)
+password = st.text_input("", type="password", key="pwd")
 login_clicked = st.button("Login")
 
 if login_clicked:
     admin_pass = st.secrets["ADMIN_PASSWORD"]
 
     if password == admin_pass:
-        st.success("Admin Access Granted!")
+        st.success("✅ Admin Access Granted!", icon="✔️")
         st.session_state["admin"] = True
     else:
         st.error("❌ Incorrect password")
@@ -59,34 +43,30 @@ if st.session_state.get("admin", False):
         st.warning("Database reset! Reload the page to start first-time setup.")
         st.stop()
 
-    # ---------- FUNCTION TO PICK MONTH AND YEAR (Date = 3rd) ---------- #
+    # ---------- SELECT MONTH & YEAR ---------- #
     def select_month_year(label, key_name):
         st.subheader(label)
         col1, col2 = st.columns(2)
         with col1:
             month_input = st.selectbox(
-                "Select Month",
-                options=[
-                    "Jan","Feb","Mar","Apr","May","Jun",
-                    "Jul","Aug","Sep","Oct","Nov","Dec"
-                ],
+                "Month",
+                options=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
                 index=datetime.now().month - 1,
                 key=f"{key_name}_month"
             )
         with col2:
             current_year = datetime.now().year
             year_input = st.number_input(
-                "Select Year",
+                "Year",
                 min_value=2000,
                 max_value=2100,
                 value=current_year,
                 step=1,
                 key=f"{key_name}_year"
             )
-        # Internally set date to 3rd
         month_number = datetime.strptime(month_input, "%b").month
         date_obj = datetime(year_input, month_number, 3)
-        return date_obj.strftime("%b-%Y")  # e.g., Oct-2025
+        return date_obj.strftime("%b-%Y")
 
     # ---------- FIRST-TIME SETUP ---------- #
     if not is_initialized():
@@ -108,7 +88,6 @@ if st.session_state.get("admin", False):
             st.success("Initial readings saved. Reload the page to continue.")
             st.stop()
 
-    # ---------- NORMAL FLOW ---------- #
     st.success("Previous month readings loaded automatically")
 
     prev = {
@@ -127,11 +106,8 @@ if st.session_state.get("admin", False):
     current['t3'] = st.number_input("Tenant 3", min_value=prev['t3'])
     current['water'] = st.number_input("Water Motor", min_value=prev['water'])
 
-    # Optional: actual total bill
     st.subheader("Optional: Enter Actual Total Bill Amount (₹)")
-    actual_bill_input = st.number_input(
-        "Amount Paid to Government", min_value=0, value=0
-    )
+    actual_bill_input = st.number_input("Amount Paid to Government", min_value=0, value=0)
 
     if st.button("Calculate Bill"):
         if actual_bill_input > 0:
@@ -140,19 +116,46 @@ if st.session_state.get("admin", False):
             bills = calculate_bill(current)
 
         st.subheader("Final Bill")
+        # ---------- Color coding based on amount ----------
+        amounts_sorted = sorted([(k, bills[k]['amount']) for k in bills], key=lambda x: x[1])
+        color_map = {}
+        color_map[amounts_sorted[0][0]] = "green"
+        color_map[amounts_sorted[1][0]] = "yellow"
+        color_map[amounts_sorted[2][0]] = "red"
+
         cols = st.columns(3)
-
-        # Save readings with amount collected
-        amounts = {m: bills[m]['amount'] for m in bills}
-        update_readings(current, month_str, amounts=amounts)
-
+        amounts_to_save = {}
         for col, tenant in zip(cols, ['t1','t2','t3']):
             with col:
-                st.info(f"Tenant {tenant[-1]}")
-                st.write(f"Units: **{bills[tenant]['units']}**")
-                st.write(f"Amount: **₹{bills[tenant]['amount']}**")
+                amt_color = color_map[tenant]
+                st.markdown(f"<div style='background-color:{amt_color};padding:10px;border-radius:5px'>"
+                            f"<b>Tenant {tenant[-1]}</b><br>"
+                            f"Units: {bills[tenant]['units']}<br>"
+                            f"Amount: ₹{bills[tenant]['amount']}</div>", unsafe_allow_html=True)
+                amounts_to_save[tenant] = bills[tenant]['amount']
 
+        # Save readings with amount collected
+        update_readings(current, month_str, amounts=amounts_to_save)
         st.success("Readings saved for the selected month ✅")
 
+# ---------- BOTTOM: Recent 2 Months Summary + Full History ---------- #
+st.markdown("<hr>", unsafe_allow_html=True)
+st.subheader("📊 Recent 2 Months Summary")
+
+# Fetch full history
+full_history = get_full_history()
+if full_history:
+    df = pd.DataFrame(full_history, columns=["Meter","Month","Reading","Amount Collected"])
+    # Last 2 months per meter
+    last_months = df['Month'].unique()[-2:]
+    recent_df = df[df['Month'].isin(last_months)]
+    st.dataframe(recent_df)
 else:
-    st.info("Admin access required to modify data")
+    st.info("No data available yet")
+
+# Full history in single expander
+with st.expander("Show Full History"):
+    if full_history:
+        st.dataframe(df)
+    else:
+        st.info("No data available yet")

@@ -17,13 +17,14 @@ def init_db():
         )
     """)
     
-    # History table
+    # History table with optional amount column
     cur.execute("""
         CREATE TABLE IF NOT EXISTS readings_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             meter_id TEXT,
             month TEXT,
-            reading INTEGER
+            reading INTEGER,
+            amount REAL DEFAULT NULL
         )
     """)
     
@@ -55,7 +56,11 @@ def get_previous_reading(meter_id):
     conn.close()
     return value
 
-def update_readings(readings: dict, month=None):
+def update_readings(readings: dict, month=None, amounts=None):
+    """
+    readings: dict of meter_id -> reading
+    amounts: dict of meter_id -> amount collected (optional)
+    """
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     
@@ -68,10 +73,13 @@ def update_readings(readings: dict, month=None):
             "UPDATE meters SET last_reading=? WHERE meter_id=?",
             (value, meter_id)
         )
+        amt = None
+        if amounts and meter_id in amounts:
+            amt = amounts[meter_id]
         # Insert into history
         cur.execute(
-            "INSERT INTO readings_history (meter_id, month, reading) VALUES (?, ?, ?)",
-            (meter_id, month, value)
+            "INSERT INTO readings_history (meter_id, month, reading, amount) VALUES (?, ?, ?, ?)",
+            (meter_id, month, value, amt)
         )
     conn.commit()
     conn.close()
@@ -120,7 +128,7 @@ def get_history(meter_id):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     cur.execute(
-        "SELECT month, reading FROM readings_history WHERE meter_id=? ORDER BY id ASC",
+        "SELECT month, reading, amount FROM readings_history WHERE meter_id=? ORDER BY id ASC",
         (meter_id,)
     )
     data = cur.fetchall()

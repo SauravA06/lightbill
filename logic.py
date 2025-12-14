@@ -2,14 +2,14 @@ import sqlite3
 from datetime import datetime
 
 DB_NAME = "electricity.db"
-COST_PER_UNIT = 10  # ₹10 per unit
+COST_PER_UNIT = 10  # ₹10 per unit if actual bill not provided
 
 # ---------- DATABASE SETUP ---------- #
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     
-    # Main meters table
+    # Meters table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS meters (
             meter_id TEXT PRIMARY KEY,
@@ -37,7 +37,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ---------- FIRST TIME CHECK ---------- #
+# ---------- CHECK IF DB HAS INITIAL READINGS ---------- #
 def is_initialized():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
@@ -60,7 +60,7 @@ def update_readings(readings: dict, month=None):
     cur = conn.cursor()
     
     if month is None:
-        month = datetime.now().strftime("%b-%Y")  # fallback to current month
+        month = datetime.now().strftime("%b-%Y")
     
     for meter_id, value in readings.items():
         # Update last_reading
@@ -76,30 +76,44 @@ def update_readings(readings: dict, month=None):
     conn.commit()
     conn.close()
 
-def calculate_bill(current_readings: dict):
+def calculate_bill(current_readings: dict, actual_total_bill=None):
+    """
+    Calculate bills per tenant.
+    If actual_total_bill is provided, distribute proportionally with rounding adjustment.
+    Otherwise, use per-unit cost.
+    """
     prev = {m: get_previous_reading(m) for m in current_readings}
 
-    tenant_units = {
-        m: current_readings[m] - prev[m]
-        for m in ['t1', 't2', 't3']
-    }
-
+    # Tenant units
+    tenant_units = {m: current_readings[m] - prev[m] for m in ['t1','t2','t3']}
     water_units = current_readings['water'] - prev['water']
     water_share = water_units / 3
 
-    final_units = {
-        m: tenant_units[m] + water_share
-        for m in tenant_units
-    }
+    final_units = {m: tenant_units[m] + water_share for m in tenant_units}
 
-    bills = {
-        m: {
-            "units": round(final_units[m], 2),
-            "amount": round(final_units[m] * COST_PER_UNIT, 2)
+    if actual_total_bill and actual_total_bill > 0:
+        total_units = sum(final_units.values())
+        bills = {
+            m: {
+                "units": round(final_units[m],2),
+                "amount": round((final_units[m]/total_units)*actual_total_bill,2)
+            }
+            for m in final_units
         }
-        for m in final_units
-    }
-
+        # ---------- ROUNDING ADJUSTMENT ----------
+        total_collected = sum(b['amount'] for b in bills.values())
+        difference = round(actual_total_bill - total_collected, 2)
+        if difference != 0:
+            # Add difference to the first tenant (T1) to balance
+            bills['t1']['amount'] = round(bills['t1']['amount'] + difference, 2)
+    else:
+        bills = {
+            m: {
+                "units": round(final_units[m],2),
+                "amount": round(final_units[m]*COST_PER_UNIT,2)
+            }
+            for m in final_units
+        }
     return bills
 
 def get_history(meter_id):

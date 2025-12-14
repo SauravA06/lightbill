@@ -23,26 +23,39 @@ if st.button("⚠️ Reset Database (Start Fresh)"):
     st.warning("Database reset! Reload the page to start first-time setup.")
     st.stop()
 
-# ---------- FUNCTION TO PICK MONTH (3rd of the month internally) ---------- #
-def select_month(label):
+# ---------- FUNCTION TO PICK MONTH AND YEAR (Date = 3rd) ---------- #
+def select_month_year(label, key_name):
     st.subheader(label)
-    month_input = st.selectbox(
-        "Choose Month",
-        options=[
-            "Jan","Feb","Mar","Apr","May","Jun",
-            "Jul","Aug","Sep","Oct","Nov","Dec"
-        ],
-        index=datetime.now().month - 1
-    )
-    year = datetime.now().year
+    col1, col2 = st.columns(2)
+    with col1:
+        month_input = st.selectbox(
+            "Select Month",
+            options=[
+                "Jan","Feb","Mar","Apr","May","Jun",
+                "Jul","Aug","Sep","Oct","Nov","Dec"
+            ],
+            index=datetime.now().month - 1,
+            key=f"{key_name}_month"
+        )
+    with col2:
+        current_year = datetime.now().year
+        year_input = st.number_input(
+            "Select Year",
+            min_value=2000,
+            max_value=2100,
+            value=current_year,
+            step=1,
+            key=f"{key_name}_year"
+        )
+    # Internally set date to 3rd
     month_number = datetime.strptime(month_input, "%b").month
-    month_date = datetime(year, month_number, 3)
-    return month_date.strftime("%b-%Y")  # e.g., Oct-2025
+    date_obj = datetime(year_input, month_number, 3)
+    return date_obj.strftime("%b-%Y")  # e.g., Oct-2025
 
 # ---------- FIRST-TIME SETUP ---------- #
 if not is_initialized():
     st.warning("First-time setup: Enter initial meter readings")
-    month_str = select_month("Select Month for Initial Readings")
+    month_str = select_month_year("Select Month & Year for Initial Readings", key_name="init")
 
     t1_init = st.number_input("Tenant 1 Initial Reading", min_value=0)
     t2_init = st.number_input("Tenant 2 Initial Reading", min_value=0)
@@ -69,7 +82,7 @@ prev = {
     'water': get_previous_reading('water')
 }
 
-month_str = select_month("Select Month for Current Readings")
+month_str = select_month_year("Select Month & Year for Current Readings", key_name="current")
 
 st.subheader("Enter Current Readings")
 current = {}
@@ -99,7 +112,7 @@ if st.button("Calculate Bill"):
             st.write(f"Units: **{bills[tenant]['units']}**")
             st.write(f"Amount: **₹{bills[tenant]['amount']}**")
 
-    # Save readings with selected month
+    # Save readings with selected month-year
     update_readings(current, month_str)
     st.success("Readings saved for the selected month ✅")
 

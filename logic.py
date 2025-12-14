@@ -55,10 +55,12 @@ def get_previous_reading(meter_id):
     conn.close()
     return value
 
-def update_readings(readings: dict):
+def update_readings(readings: dict, month=None):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    month = datetime.now().strftime("%b-%Y")  # e.g., Dec-2025
+    
+    if month is None:
+        month = datetime.now().strftime("%b-%Y")  # fallback to current month
     
     for meter_id, value in readings.items():
         # Update last_reading
@@ -110,3 +112,14 @@ def get_history(meter_id):
     data = cur.fetchall()
     conn.close()
     return data
+
+def reset_db():
+    """
+    Reset all meters and clear history.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("UPDATE meters SET last_reading=0")
+    cur.execute("DELETE FROM readings_history")
+    conn.commit()
+    conn.close()

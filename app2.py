@@ -1,12 +1,18 @@
 import streamlit as st
-from logic import init_db, calculate_bill, get_previous_reading, update_readings, is_initialized
+from logic import (
+    init_db,
+    calculate_bill,
+    get_previous_reading,
+    update_readings,
+    is_initialized,
+    get_history
+)
 
-
-st.set_page_config(page_title="Electricity Bill Calculator")
-
+st.set_page_config(page_title="Electricity Bill Calculator", layout="wide")
 st.title("⚡ Electricity Bill Calculator")
 st.caption("3 Tenants + Shared Water Motor")
 
+# Initialize DB
 init_db()
 
 # ---------- FIRST TIME SETUP ---------- #
@@ -25,11 +31,10 @@ if not is_initialized():
             't3': t3_init,
             'water': water_init
         })
-        st.success("Initial readings saved. Reload the page.")
+        st.success("Initial readings saved. Reload the page to continue.")
         st.stop()
 
 # ---------- NORMAL MONTHLY FLOW ---------- #
-
 st.success("Previous month readings loaded automatically")
 
 prev = {
@@ -59,5 +64,13 @@ if st.button("Calculate Bill"):
             st.write(f"Units: **{bills[tenant]['units']}**")
             st.write(f"Amount: **₹{bills[tenant]['amount']}**")
 
+    # Save readings for next month
     update_readings(current)
     st.success("Readings saved for next month ✅")
+
+# ---------- HISTORY DISPLAY ---------- #
+st.subheader("📜 Meter Reading History")
+for tenant in ['t1', 't2', 't3', 'water']:
+    st.markdown(f"**{tenant.upper()} History**")
+    hist = get_history(tenant)
+    st.table(hist)

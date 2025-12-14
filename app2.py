@@ -23,9 +23,18 @@ init_db()
 # ---------- PASSWORD SECTION ---------- #
 st.markdown("<h4 style='text-align: center;'>Enter Admin Password</h4>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns([1,2,1])
+
 with col2:
-    password = st.text_input("", type="password", key="pwd", placeholder="Password")
-    login_clicked = st.button("Login", key="login_button")
+    password = st.text_input(
+        "",
+        type="password",
+        key="pwd",
+        placeholder="Password"
+    )
+
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    login_clicked = st.button("Login")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if login_clicked:
     admin_pass = st.secrets["ADMIN_PASSWORD"]
@@ -151,3 +160,4 @@ if st.session_state.get("admin", False):
     if st.button("⚠️ Reset Database (Start Fresh)"):
         reset_db()
         st.warning("Database reset! Reload the page to start first-time setup.")
+

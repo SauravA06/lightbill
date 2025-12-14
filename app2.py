@@ -27,6 +27,15 @@ if st.button("⚠️ Reset Database (Start Fresh)"):
 if not is_initialized():
     st.warning("First-time setup: Enter initial meter readings")
 
+    # Month picker for initial readings
+    st.subheader("Select Month for Initial Readings")
+    month_input = st.date_input(
+        "Month",
+        value=datetime.now(),
+        max_value=datetime.now()
+    )
+    month_str = month_input.strftime("%b-%Y")  # e.g., Oct-2025
+
     t1_init = st.number_input("Tenant 1 Initial Reading", min_value=0)
     t2_init = st.number_input("Tenant 2 Initial Reading", min_value=0)
     t3_init = st.number_input("Tenant 3 Initial Reading", min_value=0)
@@ -38,7 +47,7 @@ if not is_initialized():
             't2': t2_init,
             't3': t3_init,
             'water': water_init
-        })
+        }, month=month_str)   # save with selected month
         st.success("Initial readings saved. Reload the page to continue.")
         st.stop()
 
@@ -52,7 +61,8 @@ prev = {
     'water': get_previous_reading('water')
 }
 
-st.subheader("Select Month for these readings")
+# Month picker for current readings
+st.subheader("Select Month for Current Readings")
 month_input = st.date_input(
     "Reading Month",
     value=datetime.now(),

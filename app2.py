@@ -20,7 +20,6 @@ init_db()
 # ---------- READ-ONLY HISTORY FOR ALL USERS ---------- #
 st.subheader("📜 Meter Reading & Amount History (Read-Only)")
 for tenant in ['t1','t2','t3','water']:
-    st.markdown(f"**{tenant.upper()} History**")
     hist = get_history(tenant)
     table_data = []
     for month, reading, amount in hist:
@@ -29,14 +28,30 @@ for tenant in ['t1','t2','t3','water']:
             "Reading": reading,
             "Amount Collected": amount if amount is not None else "-"
         })
-    st.table(table_data)
+
+    # Use expander (dropdown)
+    with st.expander(f"{tenant.upper()} History"):
+        if table_data:
+            st.table(table_data)
+        else:
+            st.info("No data yet for this meter")
 
 # ---------- PASSWORD-PROTECTED ADMIN SECTION ---------- #
-st.subheader("🔒 Admin Actions (Enter/Update Readings)")
+st.subheader("🔒 Admin Actions")
 password = st.text_input("Enter admin password", type="password")
-admin_pass = st.secrets["ADMIN_PASSWORD"]  # fetch password from secrets
-if password == admin_pass:
-    st.success("Admin Access Granted!")
+login_clicked = st.button("Login")
+
+if login_clicked:
+    admin_pass = st.secrets["ADMIN_PASSWORD"]
+
+    if password == admin_pass:
+        st.success("Admin Access Granted!")
+        st.session_state["admin"] = True
+    else:
+        st.error("❌ Incorrect password")
+
+# ---------- ADMIN LOGIC ---------- #
+if st.session_state.get("admin", False):
 
     # ---------- RESET DATABASE BUTTON ---------- #
     if st.button("⚠️ Reset Database (Start Fresh)"):
@@ -140,6 +155,4 @@ if password == admin_pass:
         st.success("Readings saved for the selected month ✅")
 
 else:
-    st.info("Enter password to access admin features")
-
-
+    st.info("Admin access required to modify data")

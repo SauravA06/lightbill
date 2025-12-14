@@ -107,7 +107,7 @@ if st.session_state.get("admin", False):
     current['water'] = st.number_input("Water Motor", min_value=prev['water'])
 
     st.subheader("Optional: Enter Actual Total Bill Amount (₹)")
-    actual_bill_input = st.number_input("Amount Paid to Government", min_value=0, value=0)
+    actual_bill_input = st.number_input("Amount Paid to MSEDCL", min_value=0, value=0)
 
     if st.button("Calculate Bill"):
         if actual_bill_input > 0:
@@ -159,3 +159,4 @@ with st.expander("Show Full History"):
         st.dataframe(df)
     else:
         st.info("No data available yet")
+

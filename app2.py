@@ -34,7 +34,7 @@ for tenant in ['t1','t2','t3','water']:
 # ---------- PASSWORD-PROTECTED ADMIN SECTION ---------- #
 st.subheader("🔒 Admin Actions (Enter/Update Readings)")
 password = st.text_input("Enter admin password", type="password")
-if password == "YourSecret123":  # change this
+if password == "allam2400":  # change this
     st.success("Admin Access Granted!")
 
     # ---------- RESET DATABASE BUTTON ---------- #
@@ -140,3 +140,4 @@ if password == "YourSecret123":  # change this
 
 else:
     st.info("Enter password to access admin features")
+

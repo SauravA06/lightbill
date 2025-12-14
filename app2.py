@@ -5,15 +5,23 @@ from logic import (
     get_previous_reading,
     update_readings,
     is_initialized,
-    get_history
+    get_history,
+    reset_db
 )
+from datetime import datetime
 
 st.set_page_config(page_title="Electricity Bill Calculator", layout="wide")
 st.title("⚡ Electricity Bill Calculator")
 st.caption("3 Tenants + Shared Water Motor")
 
-# Initialize DB
+# ---------- INIT DB ---------- #
 init_db()
+
+# ---------- RESET BUTTON ---------- #
+if st.button("⚠️ Reset Database (Start Fresh)"):
+    reset_db()
+    st.warning("Database reset! Reload the page to start first-time setup.")
+    st.stop()
 
 # ---------- FIRST TIME SETUP ---------- #
 if not is_initialized():
@@ -34,7 +42,7 @@ if not is_initialized():
         st.success("Initial readings saved. Reload the page to continue.")
         st.stop()
 
-# ---------- NORMAL MONTHLY FLOW ---------- #
+# ---------- NORMAL FLOW ---------- #
 st.success("Previous month readings loaded automatically")
 
 prev = {
@@ -44,8 +52,15 @@ prev = {
     'water': get_previous_reading('water')
 }
 
-st.subheader("Enter Current Readings")
+st.subheader("Select Month for these readings")
+month_input = st.date_input(
+    "Reading Month",
+    value=datetime.now(),
+    max_value=datetime.now()
+)
+month_str = month_input.strftime("%b-%Y")  # e.g., Oct-2025
 
+st.subheader("Enter Current Readings")
 current = {}
 current['t1'] = st.number_input("Tenant 1", min_value=prev['t1'])
 current['t2'] = st.number_input("Tenant 2", min_value=prev['t2'])
@@ -64,9 +79,9 @@ if st.button("Calculate Bill"):
             st.write(f"Units: **{bills[tenant]['units']}**")
             st.write(f"Amount: **₹{bills[tenant]['amount']}**")
 
-    # Save readings for next month
-    update_readings(current)
-    st.success("Readings saved for next month ✅")
+    # Save readings with selected month
+    update_readings(current, month_str)
+    st.success("Readings saved for the selected month ✅")
 
 # ---------- HISTORY DISPLAY ---------- #
 st.subheader("📜 Meter Reading History")

@@ -1,19 +1,32 @@
 import sqlite3
+from datetime import datetime
 
 DB_NAME = "electricity.db"
 COST_PER_UNIT = 10  # ₹10 per unit
-
 
 # ---------- DATABASE SETUP ---------- #
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
+    
+    # Main meters table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS meters (
             meter_id TEXT PRIMARY KEY,
             last_reading INTEGER
         )
     """)
+    
+    # History table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS readings_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            meter_id TEXT,
+            month TEXT,
+            reading INTEGER
+        )
+    """)
+    
     meters = [
         ('t1', 0),
         ('t2', 0),
@@ -24,6 +37,14 @@ def init_db():
     conn.commit()
     conn.close()
 
+# ---------- FIRST TIME CHECK ---------- #
+def is_initialized():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM meters WHERE last_reading > 0")
+    count = cur.fetchone()[0]
+    conn.close()
+    return count > 0
 
 # ---------- DATABASE OPERATIONS ---------- #
 def get_previous_reading(meter_id):
@@ -34,20 +55,25 @@ def get_previous_reading(meter_id):
     conn.close()
     return value
 
-
 def update_readings(readings: dict):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
+    month = datetime.now().strftime("%b-%Y")  # e.g., Dec-2025
+    
     for meter_id, value in readings.items():
+        # Update last_reading
         cur.execute(
             "UPDATE meters SET last_reading=? WHERE meter_id=?",
             (value, meter_id)
         )
+        # Insert into history
+        cur.execute(
+            "INSERT INTO readings_history (meter_id, month, reading) VALUES (?, ?, ?)",
+            (meter_id, month, value)
+        )
     conn.commit()
     conn.close()
 
-
-# ---------- BILL CALCULATION ---------- #
 def calculate_bill(current_readings: dict):
     prev = {m: get_previous_reading(m) for m in current_readings}
 
@@ -74,27 +100,13 @@ def calculate_bill(current_readings: dict):
 
     return bills
 
-def is_initialized():
+def get_history(meter_id):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM meters WHERE last_reading > 0")
-    count = cur.fetchone()[0]
+    cur.execute(
+        "SELECT month, reading FROM readings_history WHERE meter_id=? ORDER BY id ASC",
+        (meter_id,)
+    )
+    data = cur.fetchall()
     conn.close()
-
-    return count > 0
-
-def is_initialized():
-    """
-    Returns True if at least one meter has a non-zero reading.
-    Used to check if initial readings have been set.
-    """
-    import sqlite3
-    DB_NAME = "electricity.db"
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM meters WHERE last_reading > 0")
-    count = cur.fetchone()[0]
-    conn.close()
-    return count > 0
-
-
+    return data

@@ -106,19 +106,28 @@ if st.button("Calculate Bill"):
     st.subheader("Final Bill")
     cols = st.columns(3)
 
+    # Save readings with amount collected
+    amounts = {m: bills[m]['amount'] for m in bills}
+    update_readings(current, month_str, amounts=amounts)
+
     for col, tenant in zip(cols, ['t1','t2','t3']):
         with col:
             st.info(f"Tenant {tenant[-1]}")
             st.write(f"Units: **{bills[tenant]['units']}**")
             st.write(f"Amount: **₹{bills[tenant]['amount']}**")
 
-    # Save readings with selected month-year
-    update_readings(current, month_str)
     st.success("Readings saved for the selected month ✅")
 
-# ---------- HISTORY DISPLAY ---------- #
-st.subheader("📜 Meter Reading History")
+# ---------- HISTORY DISPLAY WITH AMOUNT ---------- #
+st.subheader("📜 Meter Reading & Amount History")
 for tenant in ['t1','t2','t3','water']:
     st.markdown(f"**{tenant.upper()} History**")
     hist = get_history(tenant)
-    st.table(hist)
+    table_data = []
+    for month, reading, amount in hist:
+        table_data.append({
+            "Month": month,
+            "Reading": reading,
+            "Amount Collected": amount if amount is not None else "-"
+        })
+    st.table(table_data)

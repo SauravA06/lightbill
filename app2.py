@@ -113,7 +113,7 @@ if st.session_state.get("admin", False):
 
         st.subheader("Final Bill")
         amounts_sorted = sorted([(k, bills[k]['amount']) for k in bills], key=lambda x: x[1])
-        color_map = {amounts_sorted[0][0]:"green", amounts_sorted[1][0]:"yellow", amounts_sorted[2][0]:"red"}
+        color_map = {amounts_sorted[0][0]:"green", amounts_sorted[1][0]:"sky-blue", amounts_sorted[2][0]:"red"}
 
         cols = st.columns(3)
         amounts_to_save = {}
@@ -160,6 +160,7 @@ if st.session_state.get("admin", False):
     if st.button("⚠️ Reset Database (Start Fresh)"):
         reset_db()
         st.warning("Database reset! Reload the page to start first-time setup.")
+
 
 
 

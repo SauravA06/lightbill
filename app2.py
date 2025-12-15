@@ -112,8 +112,11 @@ if st.session_state.get("admin", False):
             bills = calculate_bill(current)
 
         st.subheader("Final Bill")
-        amounts_sorted = sorted(
-    [(k, bills[k]['amount']) for k in bills],
+        # Only tenants (exclude water)
+tenant_keys = ['t1', 't2', 't3']
+
+amounts_sorted = sorted(
+    [(k, bills[k]['amount']) for k in tenant_keys],
     key=lambda x: x[1]
 )
 
@@ -202,6 +205,7 @@ if st.session_state.get("admin", False):
     if st.button("⚠️ Reset Database (Start Fresh)"):
         reset_db()
         st.warning("Database reset! Reload the page to start first-time setup.")
+
 
 
 

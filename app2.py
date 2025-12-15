@@ -112,20 +112,62 @@ if st.session_state.get("admin", False):
             bills = calculate_bill(current)
 
         st.subheader("Final Bill")
-        amounts_sorted = sorted([(k, bills[k]['amount']) for k in bills], key=lambda x: x[1])
-        color_map = {amounts_sorted[0][0]:"green", amounts_sorted[1][0]:"sky-blue", amounts_sorted[2][0]:"red"}
+        amounts_sorted = sorted(
+    [(k, bills[k]['amount']) for k in bills],
+    key=lambda x: x[1]
+)
 
-        cols = st.columns(3)
-        amounts_to_save = {}
-        for col, tenant in zip(cols, ['t1','t2','t3']):
-            with col:
-                amt_color = color_map[tenant]
-                st.markdown(f"<div style='background-color:{amt_color};padding:10px;border-radius:5px'>"
-                            f"<b>Tenant {tenant[-1]}</b><br>"
-                            f"Units: {bills[tenant]['units']}<br>"
-                            f"Amount: ₹{bills[tenant]['amount']}</div>", unsafe_allow_html=True)
-                amounts_to_save[tenant] = bills[tenant]['amount']
+# Pastel color palette
+PASTEL_COLORS = {
+    "green": {
+        "bg": "#E8F5E9",
+        "text": "#1B5E20"
+    },
+    "yellow": {
+        "bg": "#FFF8E1",
+        "text": "#6D4C00"
+    },
+    "red": {
+        "bg": "#FDECEA",
+        "text": "#7F1D1D"
+    }
+}
 
+color_rank = {
+    amounts_sorted[0][0]: "green",   # lowest bill
+    amounts_sorted[1][0]: "yellow",  # medium bill
+    amounts_sorted[2][0]: "red"      # highest bill
+}
+
+cols = st.columns(3)
+amounts_to_save = {}
+
+for col, tenant in zip(cols, ['t1', 't2', 't3']):
+    with col:
+        theme = PASTEL_COLORS[color_rank[tenant]]
+        st.markdown(
+            f"""
+            <div style="
+                background-color:{theme['bg']};
+                padding:16px;
+                border-radius:12px;
+                border-left:6px solid {theme['text']};
+            ">
+                <h4 style="color:{theme['text']}; margin-bottom:8px;">
+                    Tenant {tenant[-1]}
+                </h4>
+                <p style="margin:4px 0; color:{theme['text']};">
+                    Units Consumed: <b>{bills[tenant]['units']}</b>
+                </p>
+                <p style="margin:4px 0; color:{theme['text']};">
+                    Amount Payable: <b>₹{bills[tenant]['amount']}</b>
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        amounts_to_save[tenant] = bills[tenant]['amount']
         update_readings(current, month_str, amounts=amounts_to_save)
         st.success("Readings saved for the selected month ✅")
 
@@ -160,6 +202,7 @@ if st.session_state.get("admin", False):
     if st.button("⚠️ Reset Database (Start Fresh)"):
         reset_db()
         st.warning("Database reset! Reload the page to start first-time setup.")
+
 
 
 
